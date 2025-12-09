@@ -1,0 +1,127 @@
+import io from 'socket.io-client';
+import { Comment } from './api';
+
+interface SocketType {
+  connected: boolean;
+  emit: (event: string, data?: unknown) => void;
+  on: (event: string, callback: (data?: unknown) => void) => void;
+  disconnect: () => void;
+  removeAllListeners: () => void;
+}
+
+interface CommentLikeData {
+  commentId: string;
+  likes: string[];
+}
+
+interface CommentDislikeData {
+  commentId: string;
+  dislikes: string[];
+}
+
+interface UserTypingData {
+  username: string;
+}
+
+class SocketService {
+  private socket: SocketType | null = null;
+  private readonly SERVER_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5001';
+
+  connect(token: string): void {
+    if (this.socket?.connected) {
+      return;
+    }
+
+    this.socket = io(this.SERVER_URL, {
+      auth: {
+        token,
+      },
+    }) as SocketType;
+
+    this.socket.on('connect', () => {
+      console.log('Connected to server');
+      this.socket?.emit('joinComments');
+    });
+
+    this.socket.on('disconnect', () => {
+      console.log('Disconnected from server');
+    });
+
+    this.socket.on('connect_error', (error: unknown) => {
+      console.error('Connection error:', error);
+    });
+  }
+
+  disconnect(): void {
+    if (this.socket) {
+      this.socket.emit('leaveComments');
+      this.socket.disconnect();
+      this.socket = null;
+    }
+  }
+
+  // Event listeners
+  onNewComment(callback: (comment: Comment) => void): void {
+    this.socket?.on('newComment', (data: unknown) => {
+      callback(data as Comment);
+    });
+  }
+
+  onCommentUpdated(callback: (comment: Comment) => void): void {
+    this.socket?.on('commentUpdated', (data: unknown) => {
+      callback(data as Comment);
+    });
+  }
+
+  onCommentDeleted(callback: (commentId: string) => void): void {
+    this.socket?.on('commentDeleted', (data: unknown) => {
+      callback(data as string);
+    });
+  }
+
+  onCommentLiked(callback: (data: CommentLikeData) => void): void {
+    this.socket?.on('commentLiked', (data: unknown) => {
+      callback(data as CommentLikeData);
+    });
+  }
+
+  onCommentDisliked(callback: (data: CommentDislikeData) => void): void {
+    this.socket?.on('commentDisliked', (data: unknown) => {
+      callback(data as CommentDislikeData);
+    });
+  }
+
+  onUserTyping(callback: (data: UserTypingData) => void): void {
+    this.socket?.on('userTyping', (data: unknown) => {
+      callback(data as UserTypingData);
+    });
+  }
+
+  onUserStopTyping(callback: (data: UserTypingData) => void): void {
+    this.socket?.on('userStopTyping', (data: unknown) => {
+      callback(data as UserTypingData);
+    });
+  }
+
+  // Event emitters
+  emitTyping(username: string): void {
+    this.socket?.emit('typing', { username });
+  }
+
+  emitStopTyping(username: string): void {
+    this.socket?.emit('stopTyping', { username });
+  }
+
+  // Remove event listeners
+  removeAllListeners(): void {
+    this.socket?.removeAllListeners();
+  }
+
+  // Check if connected
+  isConnected(): boolean {
+    return this.socket?.connected || false;
+  }
+}
+
+export const socketService = new SocketService();
+export default socketService;
