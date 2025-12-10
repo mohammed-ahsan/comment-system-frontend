@@ -44,7 +44,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       <footer className="layout-footer">
         <div className="footer-content">
-          <p>&copy; 2024 Comment System. Built with MERN stack.</p>
+          <p>&copy; 2025 Comment System. Built with MERN stack.</p>
         </div>
       </footer>
     </div>

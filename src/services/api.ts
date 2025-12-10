@@ -53,8 +53,18 @@ export interface Comment {
     username: string;
     avatar?: string;
   };
-  likes: string[];
-  dislikes: string[];
+  likes: Array<{ user: string; createdAt: string }>;
+  dislikes: Array<{ user: string; createdAt: string }>;
+  likeCount: number;
+  dislikeCount: number;
+  engagementScore: number;
+  isLikedByUser: boolean;
+  isDislikedByUser: boolean;
+  canEdit: boolean;
+  parentComment?: string;
+  isEdited: boolean;
+  editedAt?: string;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -89,8 +99,8 @@ export const authAPI = {
   register: (username: string, email: string, password: string): Promise<AxiosResponse<AuthResponse>> =>
     api.post('/auth/register', { username, email, password }),
 
-  getProfile: (): Promise<AxiosResponse<{ success: boolean; user: User }>> =>
-    api.get('/auth/profile'),
+  getProfile: (): Promise<AxiosResponse<{ success: boolean; data: { user: User } }>> =>
+    api.get('/auth/me'),
 };
 
 // Comments API

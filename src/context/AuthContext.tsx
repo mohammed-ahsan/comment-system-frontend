@@ -108,7 +108,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           dispatch({
             type: 'LOGIN_SUCCESS',
             payload: {
-              user: response.data.user,
+              user: response.data.data.user,
               token,
             },
           });

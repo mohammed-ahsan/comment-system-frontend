@@ -5,7 +5,7 @@ import { socketService } from '../../services/socket';
 import { useAuth } from '../../context/AuthContext';
 import CommentItem from './CommentItem';
 import CommentForm from './CommentForm';
-import Pagination from './Pagination';
+import EnhancedPagination from './EnhancedPagination';
 import SortOptions from './SortOptions';
 import './Comments.scss';
 
@@ -14,12 +14,18 @@ type SortOption = 'newest' | 'mostLiked' | 'mostDisliked';
 
 const CommentList: React.FC = () => {
   const [comments, setComments] = useState<Comment[]>([]);
+  const [replyCounts, setReplyCounts] = useState<Record<string, number>>({});
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
-    totalComments: 0,
+    total: 0,
     hasNextPage: false,
     hasPrevPage: false,
+    isFirstPage: true,
+    isLastPage: true,
+    startIndex: 0,
+    endIndex: 0,
+    remainingItems: 0,
   });
   const [sort, setSort] = useState<SortOption>('newest');
   const [loading, setLoading] = useState(true);
@@ -40,7 +46,20 @@ const CommentList: React.FC = () => {
 
       if (response.data.success) {
         setComments(response.data.data.comments);
-        setPagination(response.data.data.pagination);
+        // Map backend pagination to frontend pagination format
+        const backendPagination = response.data.data.pagination as any;
+        setPagination({
+          currentPage: backendPagination.currentPage,
+          totalPages: backendPagination.totalPages,
+          total: backendPagination.totalComments,
+          hasNextPage: backendPagination.hasNextPage,
+          hasPrevPage: backendPagination.hasPrevPage,
+          isFirstPage: backendPagination.isFirstPage || backendPagination.currentPage === 1,
+          isLastPage: backendPagination.isLastPage || backendPagination.currentPage === backendPagination.totalPages,
+          startIndex: backendPagination.startIndex || (backendPagination.currentPage - 1) * 10 + 1,
+          endIndex: backendPagination.endIndex || Math.min(backendPagination.currentPage * 10, backendPagination.totalComments),
+          remainingItems: backendPagination.remainingItems || Math.max(0, backendPagination.totalComments - backendPagination.currentPage * 10),
+        });
       }
     } catch (err: unknown) {
       setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to fetch comments');
@@ -64,7 +83,17 @@ const CommentList: React.FC = () => {
 
       // Set up real-time event listeners
       socketService.onNewComment((newComment: Comment) => {
-        setComments(prev => [newComment, ...prev]);
+        if (newComment.parentComment) {
+          // It's a reply, update reply count for parent
+          const parentId = newComment.parentComment;
+          setReplyCounts(prev => ({
+            ...prev,
+            [parentId]: (prev[parentId] || 0) + 1
+          }));
+        } else {
+          // It's a main comment
+          setComments(prev => [newComment, ...prev]);
+        }
       });
 
       socketService.onCommentUpdated((updatedComment: Comment) => {
@@ -77,20 +106,30 @@ const CommentList: React.FC = () => {
 
       socketService.onCommentDeleted((commentId: string) => {
         setComments(prev => prev.filter(comment => comment._id !== commentId));
+        // Also remove from reply counts if it was a reply
+        setReplyCounts(prev => {
+          const newCounts = { ...prev };
+          Object.keys(newCounts).forEach(parentId => {
+            if (newCounts[parentId] > 0) {
+              newCounts[parentId] = Math.max(0, newCounts[parentId] - 1);
+            }
+          });
+          return newCounts;
+        });
       });
 
-      socketService.onCommentLiked((data) => {
+      socketService.onCommentReaction((data) => {
         setComments(prev =>
           prev.map(comment =>
-            comment._id === data.commentId ? { ...comment, likes: data.likes } : comment
-          )
-        );
-      });
-
-      socketService.onCommentDisliked((data) => {
-        setComments(prev =>
-          prev.map(comment =>
-            comment._id === data.commentId ? { ...comment, dislikes: data.dislikes } : comment
+            comment._id === data.commentId 
+              ? { 
+                  ...comment, 
+                  likeCount: data.likeCount, 
+                  dislikeCount: data.dislikeCount,
+                  isLikedByUser: data.type === 'like',
+                  isDislikedByUser: data.type === 'dislike'
+                } 
+              : comment
           )
         );
       });
@@ -104,6 +143,10 @@ const CommentList: React.FC = () => {
 
   const handleCommentCreated = (newComment: Comment) => {
     setComments(prev => [newComment, ...prev]);
+  };
+
+  const handleCommentDeleted = (commentId: string) => {
+    setComments(prev => prev.filter(comment => comment._id !== commentId));
   };
 
   const handlePageChange = (page: number) => {
@@ -128,7 +171,7 @@ const CommentList: React.FC = () => {
   return (
     <div className="comments-container">
       <div className="comments-header">
-        <h2>Comments ({pagination.totalComments})</h2>
+        <h2>Comments ({pagination.total})</h2>
         <SortOptions currentSort={sort} onSortChange={handleSortChange} />
       </div>
 
@@ -159,14 +202,16 @@ const CommentList: React.FC = () => {
             key={comment._id} 
             comment={comment} 
             onCommentUpdate={fetchComments}
+            onCommentDeleted={handleCommentDeleted}
           />
         ))}
       </div>
 
               {pagination.totalPages > 1 && (
-                <Pagination
+                <EnhancedPagination
                   pagination={pagination}
                   onPageChange={handlePageChange}
+                  loading={loading}
                 />
               )}
             </>

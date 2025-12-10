@@ -9,14 +9,12 @@ interface SocketType {
   removeAllListeners: () => void;
 }
 
-interface CommentLikeData {
+interface CommentReactionData {
   commentId: string;
-  likes: string[];
-}
-
-interface CommentDislikeData {
-  commentId: string;
-  dislikes: string[];
+  type: 'like' | 'dislike' | 'remove';
+  likeCount: number;
+  dislikeCount: number;
+  userId: string;
 }
 
 interface UserTypingData {
@@ -25,7 +23,7 @@ interface UserTypingData {
 
 class SocketService {
   private socket: SocketType | null = null;
-  private readonly SERVER_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5001';
+  private readonly SERVER_URL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000';
 
   connect(token: string): void {
     if (this.socket?.connected) {
@@ -79,15 +77,21 @@ class SocketService {
     });
   }
 
-  onCommentLiked(callback: (data: CommentLikeData) => void): void {
-    this.socket?.on('commentLiked', (data: unknown) => {
-      callback(data as CommentLikeData);
+  onCommentReaction(callback: (data: CommentReactionData) => void): void {
+    this.socket?.on('commentReaction', (data: unknown) => {
+      callback(data as CommentReactionData);
     });
   }
 
-  onCommentDisliked(callback: (data: CommentDislikeData) => void): void {
+  onCommentLiked(callback: (data: CommentReactionData) => void): void {
+    this.socket?.on('commentLiked', (data: unknown) => {
+      callback(data as CommentReactionData);
+    });
+  }
+
+  onCommentDisliked(callback: (data: CommentReactionData) => void): void {
     this.socket?.on('commentDisliked', (data: unknown) => {
-      callback(data as CommentDislikeData);
+      callback(data as CommentReactionData);
     });
   }
 
