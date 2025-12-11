@@ -58,6 +58,7 @@ export interface Comment {
   likeCount: number;
   dislikeCount: number;
   engagementScore: number;
+  replyCount?: number;
   isLikedByUser: boolean;
   isDislikedByUser: boolean;
   canEdit: boolean;

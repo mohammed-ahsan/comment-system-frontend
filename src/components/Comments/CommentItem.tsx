@@ -35,6 +35,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
     author: comment.author || { _id: '', username: 'Unknown User', avatar: undefined },
     likeCount: comment.likeCount || 0,
     dislikeCount: comment.dislikeCount || 0,
+    replyCount: comment.replyCount || 0,
     isLikedByUser: comment.isLikedByUser || false,
     isDislikedByUser: comment.isDislikedByUser || false,
   }));
@@ -136,11 +137,24 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
   const handleNewReply = useCallback((newComment: Comment) => {
     if (newComment.parentComment === currentComment._id) {
       setReplies(prev => [newComment, ...prev]);
+      setCurrentComment(prev => ({
+        ...prev,
+        replyCount: (prev.replyCount || 0) + 1
+      }));
     }
   }, [currentComment._id]);
 
   const handleReplyDeleted = useCallback((commentId: string) => {
-    setReplies(prev => prev.filter(reply => reply._id !== commentId));
+    setReplies(prev => {
+      const replyToDelete = prev.find(reply => reply._id === commentId);
+      if (replyToDelete) {
+        setCurrentComment(prev => ({
+          ...prev,
+          replyCount: Math.max(0, (prev.replyCount || 0) - 1)
+        }));
+      }
+      return prev.filter(reply => reply._id !== commentId);
+    });
   }, []);
 
   // Set up socket listeners
@@ -515,14 +529,14 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
             )}
             <span className="reaction-count">{currentComment.dislikeCount}</span>
           </button>
-          {user && (
+          {((currentComment.replyCount || 0) > 0 || user) && (
             <button
-              onClick={handleReply}
+              onClick={(currentComment.replyCount || 0) > 0 ? handleToggleReplies : handleReply}
               className="reaction-btn"
-              title="Reply to comment"
+              title={(currentComment.replyCount || 0) > 0 ? "View replies" : "Reply to comment"}
               disabled={isDeleting || isUpdating}
             >
-              💬 Reply
+              💬 {(currentComment.replyCount || 0) > 0 ? `${currentComment.replyCount || 0} ${(currentComment.replyCount || 0) === 1 ? 'Reply' : 'Replies'}` : 'Reply'}
             </button>
           )}
         </div>
