@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { formatCount } from '../../utils/formatCount';
 import './Comments.scss';
 
 interface EnhancedPaginationProps {
@@ -156,7 +157,7 @@ const EnhancedPagination: React.FC<EnhancedPaginationProps> = ({
       {showInfo && (
         <div className="pagination-info">
           <span className="pagination-text">
-            Showing {startIndex}-{endIndex} of {total} items
+            Showing {startIndex}-{endIndex} of {formatCount(total)} items
           </span>
           {totalPages > 1 && (
             <span className="pagination-pages">
@@ -307,7 +308,7 @@ const EnhancedPagination: React.FC<EnhancedPaginationProps> = ({
       {showInfo && pagination.remainingItems > 0 && (
         <div className="pagination-remaining">
           <span className="remaining-text">
-            {pagination.remainingItems} more items
+            {formatCount(pagination.remainingItems)} more items
           </span>
         </div>
       )}

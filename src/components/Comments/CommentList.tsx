@@ -3,6 +3,7 @@ import { Comment } from '../../services/api';
 import { commentsAPI } from '../../services/api';
 import { socketService } from '../../services/socket';
 import { useAuth } from '../../context/AuthContext';
+import { formatCount } from '../../utils/formatCount';
 import CommentItem from './CommentItem';
 import CommentForm from './CommentForm';
 import EnhancedPagination from './EnhancedPagination';
@@ -230,7 +231,7 @@ const CommentList: React.FC = () => {
   return (
     <div className="comments-container">
       <div className="comments-header">
-        <h2>Comments ({pagination.total})</h2>
+        <h2>Comments ({formatCount(pagination.total)})</h2>
         <SortOptions currentSort={sort} onSortChange={handleSortChange} />
       </div>
 

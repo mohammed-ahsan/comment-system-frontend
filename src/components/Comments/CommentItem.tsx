@@ -3,6 +3,7 @@ import { Comment } from '../../services/api';
 import { commentsAPI } from '../../services/api';
 import { socketService } from '../../services/socket';
 import { useAuth } from '../../context/AuthContext';
+import { formatCount, formatCountWithText } from '../../utils/formatCount';
 import ReplyForm from './ReplyForm';
 import './Comments.scss';
 
@@ -574,7 +575,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
             ) : (
               '👍'
             )}
-            <span className="reaction-count">{currentComment.likeCount}</span>
+            <span className="reaction-count">{formatCount(currentComment.likeCount)}</span>
           </button>
           <button
             onClick={handleDislike}
@@ -587,7 +588,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
             ) : (
               '👎'
             )}
-            <span className="reaction-count">{currentComment.dislikeCount}</span>
+            <span className="reaction-count">{formatCount(currentComment.dislikeCount)}</span>
           </button>
           {user && (
             <button
@@ -602,7 +603,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
                   Loading...
                 </>
               ) : (
-                (currentComment.replyCount || 0) > 0 ? `${currentComment.replyCount} ${currentComment.replyCount === 1 ? 'Reply' : 'Replies'}` : 'Reply'
+                formatCountWithText(currentComment.replyCount || 0, 'Reply', 'Replies')
               )}
             </button>
           )}
@@ -613,7 +614,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
               title="View replies"
               disabled={isDeleting || isUpdating}
             >
-              💬 {currentComment.replyCount} {currentComment.replyCount === 1 ? 'Reply' : 'Replies'}
+              💬 {formatCountWithText(currentComment.replyCount || 0, 'Reply', 'Replies')}
             </button>
           )}
         </div>
