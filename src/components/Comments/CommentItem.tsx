@@ -63,17 +63,33 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
     }
   }, [currentComment._id]);
 
-  const handleCommentReaction = useCallback((data: any) => {
+  const handleCommentReaction = useCallback((data: any) => {    
     if (data.commentId === currentComment._id) {
-      setCurrentComment(prev => ({
-        ...prev,
-        likeCount: data.likeCount,
-        dislikeCount: data.dislikeCount,
-        isLikedByUser: data.type === 'like',
-        isDislikedByUser: data.type === 'dislike'
-      }));
+      setCurrentComment(prev => {
+        const newComment = {
+          ...prev,
+          likeCount: data.likeCount,
+          dislikeCount: data.dislikeCount,
+        };
+
+        if (data.userId === user?.id) {
+          if (data.type === 'like') {
+            newComment.isLikedByUser = true;
+            newComment.isDislikedByUser = false;
+          } else if (data.type === 'dislike') {
+            newComment.isLikedByUser = false;
+            newComment.isDislikedByUser = true;
+          } else if (data.type === 'remove') {
+            newComment.isLikedByUser = false;
+            newComment.isDislikedByUser = false;
+          }
+        } else {
+
+        }
+        return newComment;
+      });
     }
-  }, [currentComment._id]);
+  }, [currentComment._id, user?.id]);
 
   const handleReplyUpdated = useCallback((updatedComment: Comment) => {
     setReplies(prev => 
@@ -84,20 +100,38 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
   }, []);
 
   const handleReplyReaction = useCallback((data: any) => {
+    if (data.commentId === currentComment._id) {
+      return;
+    }
+    
     setReplies(prev =>
-      prev.map(reply =>
-        reply._id === data.commentId
-          ? {
-              ...reply,
-              likeCount: data.likeCount,
-              dislikeCount: data.dislikeCount,
-              isLikedByUser: data.type === 'like',
-              isDislikedByUser: data.type === 'dislike'
+      prev.map(reply => {
+        if (reply._id === data.commentId) {
+          const newReply = {
+            ...reply,
+            likeCount: data.likeCount,
+            dislikeCount: data.dislikeCount,
+          };
+
+          if (data.userId === user?.id) {
+            if (data.type === 'like') {
+              newReply.isLikedByUser = true;
+              newReply.isDislikedByUser = false;
+            } else if (data.type === 'dislike') {
+              newReply.isLikedByUser = false;
+              newReply.isDislikedByUser = true;
+            } else if (data.type === 'remove') {
+              newReply.isLikedByUser = false;
+              newReply.isDislikedByUser = false;
             }
-          : reply
-      )
+          } else {
+          }
+          return newReply;
+        }
+        return reply;
+      })
     );
-  }, []);
+  }, [user?.id, currentComment._id]);
 
   const handleNewReply = useCallback((newComment: Comment) => {
     if (newComment.parentComment === currentComment._id) {

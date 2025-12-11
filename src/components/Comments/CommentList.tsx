@@ -126,8 +126,8 @@ const CommentList: React.FC = () => {
                   ...comment, 
                   likeCount: data.likeCount, 
                   dislikeCount: data.dislikeCount,
-                  isLikedByUser: data.type === 'like',
-                  isDislikedByUser: data.type === 'dislike'
+                  isLikedByUser: data.userId === user?.id ? (data.type === 'like' ? true : data.type === 'remove' ? false : comment.isLikedByUser) : comment.isLikedByUser,
+                  isDislikedByUser: data.userId === user?.id ? (data.type === 'dislike' ? true : data.type === 'remove' ? false : comment.isDislikedByUser) : comment.isDislikedByUser
                 } 
               : comment
           )
