@@ -323,12 +323,19 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
   }, [currentComment._id]);
 
   const handleReply = useCallback(() => {
-    setShowReplyForm(!showReplyForm);
-    if (!showReplyForm && !showReplies) {
+    if (showReplyForm || showReplies) {
+      // If either form or replies are showing, hide both
+      setShowReplyForm(false);
+      setShowReplies(false);
+    } else {
+      // If nothing is showing, show both
+      setShowReplyForm(true);
       setShowReplies(true);
-      loadReplies();
+      if (replies.length === 0) {
+        loadReplies();
+      }
     }
-  }, [showReplyForm, showReplies, loadReplies]);
+  }, [showReplyForm, showReplies, loadReplies, replies.length]);
 
   const handleReplyCreated = useCallback((newReply: Comment) => {
     setShowReplyForm(false);
@@ -515,14 +522,31 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
             )}
             <span className="reaction-count">{currentComment.dislikeCount}</span>
           </button>
-          {((currentComment.replyCount || 0) > 0 || user) && (
+          {user && (
             <button
-              onClick={(currentComment.replyCount || 0) > 0 ? handleToggleReplies : handleReply}
+              onClick={handleReply}
               className="reaction-btn"
-              title={(currentComment.replyCount || 0) > 0 ? "View replies" : "Reply to comment"}
+              title="Reply to comment"
+              disabled={isDeleting || isUpdating || loadingReplies}
+            >
+              💬 {loadingReplies ? (
+                <>
+                  <span className="btn-spinner"></span>
+                  Loading...
+                </>
+              ) : (
+                (currentComment.replyCount || 0) > 0 ? `${currentComment.replyCount} ${currentComment.replyCount === 1 ? 'Reply' : 'Replies'}` : 'Reply'
+              )}
+            </button>
+          )}
+          {(currentComment.replyCount || 0) > 0 && !user && (
+            <button
+              onClick={handleToggleReplies}
+              className="reaction-btn"
+              title="View replies"
               disabled={isDeleting || isUpdating}
             >
-              💬 {(currentComment.replyCount || 0) > 0 ? `${currentComment.replyCount || 0} ${(currentComment.replyCount || 0) === 1 ? 'Reply' : 'Replies'}` : 'Reply'}
+              💬 {currentComment.replyCount} {currentComment.replyCount === 1 ? 'Reply' : 'Replies'}
             </button>
           )}
         </div>
@@ -540,108 +564,87 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
       )}
 
       {/* Replies Section */}
-      {replies.length > 0 && (
+      {replies.length > 0 && showReplies && (
         <div className="replies-section">
-          <div className="replies-header">
-            <button
-              onClick={handleToggleReplies}
-              className="replies-toggle"
-              disabled={loadingReplies}
-            >
-              {loadingReplies ? (
-                <>
-                  <span className="btn-spinner"></span>
-                  Loading...
-                </>
-              ) : (
-                <>
-                  {showReplies ? 'Hide' : 'Show'} {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
-                </>
-              )}
-            </button>
-          </div>
-          
-          {showReplies && (
-            <div className="replies-list">
-              {replies.map((reply) => (
-                <div key={reply._id} className="reply-item">
-                  <div className="reply-header">
-                    <div className="reply-author">
-                      <div className="reply-avatar">
-                        {reply.author?.avatar ? (
-                          <img src={reply.author.avatar} alt={reply.author.username} />
-                        ) : (
-                          <div className="avatar-placeholder">
-                            {(reply.author?.username || 'U').charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <span className="reply-name">{reply.author?.username || 'Unknown User'}</span>
-                        <span className="reply-date">{formatDate(reply.createdAt)}</span>
-                      </div>
+          <div className="replies-list">
+            {replies.map((reply) => (
+              <div key={reply._id} className="reply-item">
+                <div className="reply-header">
+                  <div className="reply-author">
+                    <div className="reply-avatar">
+                      {reply.author?.avatar ? (
+                        <img src={reply.author.avatar} alt={reply.author.username} />
+                      ) : (
+                        <div className="avatar-placeholder">
+                          {(reply.author?.username || 'U').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <span className="reply-name">{reply.author?.username || 'Unknown User'}</span>
+                      <span className="reply-date">{formatDate(reply.createdAt)}</span>
                     </div>
                   </div>
-                  <div className="reply-content">
-                    {reply.content}
-                  </div>
-                  <div className="reply-reactions">
-                    <button
-                      onClick={() => handleReplyLike(reply._id)}
-                      className={`reply-reaction-btn ${reply.isLikedByUser ? 'liked' : ''}`}
-                      title="Like reply"
-                    >
-                      👍 {reply.likeCount}
-                    </button>
-                    <button
-                      onClick={() => handleReplyDislike(reply._id)}
-                      className={`reply-reaction-btn ${reply.isDislikedByUser ? 'disliked' : ''}`}
-                      title="Dislike reply"
-                    >
-                      👎 {reply.dislikeCount}
-                    </button>
-                    {user?.id === reply.author?._id && (
-                      <>
-                        <button
-                          onClick={() => handleEditReply(reply._id, reply.content)}
-                          className="reply-reaction-btn"
-                          title="Edit reply"
-                        >
-                          ✏️
-                        </button>
-                        <button
-                          onClick={() => handleDeleteReply(reply._id)}
-                          className="reply-reaction-btn"
-                          title="Delete reply"
-                        >
-                          🗑️
-                        </button>
-                      </>
-                    )}
-                  </div>
                 </div>
-              ))}
-              
-              {hasMoreReplies && (
-                <div className="load-more-replies">
+                <div className="reply-content">
+                  {reply.content}
+                </div>
+                <div className="reply-reactions">
                   <button
-                    onClick={handleLoadMoreReplies}
-                    className="load-more-btn"
-                    disabled={loadingReplies}
+                    onClick={() => handleReplyLike(reply._id)}
+                    className={`reply-reaction-btn ${reply.isLikedByUser ? 'liked' : ''}`}
+                    title="Like reply"
                   >
-                    {loadingReplies ? (
-                      <>
-                        <span className="btn-spinner"></span>
-                        Loading...
-                      </>
-                    ) : (
-                      'Load more replies'
-                    )}
+                    👍 {reply.likeCount}
                   </button>
+                  <button
+                    onClick={() => handleReplyDislike(reply._id)}
+                    className={`reply-reaction-btn ${reply.isDislikedByUser ? 'disliked' : ''}`}
+                    title="Dislike reply"
+                  >
+                    👎 {reply.dislikeCount}
+                  </button>
+                  {user?.id === reply.author?._id && (
+                    <>
+                      <button
+                        onClick={() => handleEditReply(reply._id, reply.content)}
+                        className="reply-reaction-btn"
+                        title="Edit reply"
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => handleDeleteReply(reply._id)}
+                        className="reply-reaction-btn"
+                        title="Delete reply"
+                      >
+                        🗑️
+                      </button>
+                    </>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            ))}
+            
+            {hasMoreReplies && (
+              <div className="load-more-replies">
+                <button
+                  onClick={handleLoadMoreReplies}
+                  className="load-more-btn"
+                  disabled={loadingReplies}
+                >
+                  {loadingReplies ? (
+                    <>
+                      <span className="btn-spinner"></span>
+                      Loading...
+                    </>
+                  ) : (
+                    'Load more replies'
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
