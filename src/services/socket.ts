@@ -60,9 +60,9 @@ class SocketService {
   }
 
   // Event listeners
-  onNewComment(callback: (comment: Comment) => void): void {
+  onNewComment(callback: (data: { comment: Comment; totalCount?: number }) => void): void {
     this.socket?.on('newComment', (data: unknown) => {
-      callback(data as Comment);
+      callback(data as { comment: Comment; totalCount?: number });
     });
   }
 
@@ -78,9 +78,9 @@ class SocketService {
     });
   }
 
-  onCommentDeleted(callback: (commentId: string) => void): void {
+  onCommentDeleted(callback: (data: { id: string; totalCount?: number }) => void): void {
     this.socket?.on('commentDeleted', (data: unknown) => {
-      callback((data as { id: string }).id);
+      callback(data as { id: string; totalCount?: number });
     });
   }
 

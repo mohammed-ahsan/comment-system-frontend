@@ -186,10 +186,16 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
     });
   }, []);
 
+  const handleMainCommentDeleted = useCallback((data: { id: string; totalCount?: number }) => {
+    // This handler is for when the main comment (this comment) is deleted
+    // We don't need to do anything here since the parent component will handle it
+    // But we need this handler to satisfy the socket service interface
+  }, []);
+
   useEffect(() => {
     socketService.onCommentUpdated(handleCommentUpdated);
     socketService.onCommentReaction(handleCommentReaction);
-    socketService.onCommentDeleted(handleReplyDeleted);
+    socketService.onCommentDeleted(handleMainCommentDeleted);
     
     socketService.onNewReply(handleNewReply);
     socketService.onReplyUpdated(handleReplyUpdated);
@@ -198,7 +204,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
 
     return () => {
     };
-  }, [handleCommentUpdated, handleCommentReaction, handleNewReply, handleReplyDeleted, handleReplyUpdated, handleReplyReaction]);
+  }, [handleCommentUpdated, handleCommentReaction, handleNewReply, handleReplyDeleted, handleReplyUpdated, handleReplyReaction, handleMainCommentDeleted]);
 
   // Optimized reaction handlers with loading states
   const handleLike = useCallback(async () => {

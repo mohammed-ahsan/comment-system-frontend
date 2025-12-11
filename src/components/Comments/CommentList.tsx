@@ -30,6 +30,7 @@ const CommentList: React.FC = () => {
   const [sort, setSort] = useState<SortOption>('newest');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
 
   const { user, isAuthenticated } = useAuth();
 
@@ -82,9 +83,19 @@ const CommentList: React.FC = () => {
       socketService.connect(token);
 
       // Set up real-time event listeners
-      socketService.onNewComment((newComment: Comment) => {
-        if (!newComment.parentComment) {
-          setComments(prev => [newComment, ...prev]);
+      socketService.onNewComment((data: { comment: Comment; totalCount?: number }) => {
+        if (!data.comment.parentComment) {
+          setComments(prev => [data.comment, ...prev]);
+          if (data.totalCount !== undefined) {
+            const totalCount = data.totalCount;
+            setPagination(prev => ({
+              ...prev,
+              total: totalCount,
+              totalPages: Math.ceil(totalCount / 10),
+              endIndex: Math.min(totalCount, prev.currentPage * 10),
+              remainingItems: Math.max(0, totalCount - prev.currentPage * 10)
+            }));
+          }
         }
       });
 
@@ -108,18 +119,30 @@ const CommentList: React.FC = () => {
         );
       });
 
-      socketService.onCommentDeleted((commentId: string) => {
+      socketService.onCommentDeleted((data: { id: string; totalCount?: number }) => {
         setComments(prev => {
-          const deletedComment = prev.find(c => c._id === commentId);
+          const deletedComment = prev.find(c => c._id === data.id);
           if (deletedComment?.parentComment) {
             return prev.map(comment => 
               comment._id === deletedComment.parentComment 
                 ? { ...comment, replyCount: Math.max(0, (comment.replyCount || 0) - 1) }
                 : comment
-            ).filter(comment => comment._id !== commentId);
+            ).filter(comment => comment._id !== data.id);
           }
-          return prev.filter(comment => comment._id !== commentId);
+          return prev.filter(comment => comment._id !== data.id);
         });
+
+        const deletedComment = comments.find(c => c._id === data.id);
+        if (data.totalCount !== undefined && !deletedComment?.parentComment) {
+          const totalCount = data.totalCount;
+          setPagination(prev => ({
+            ...prev,
+            total: totalCount,
+            totalPages: Math.ceil(totalCount / 10),
+            endIndex: Math.min(totalCount, prev.currentPage * 10),
+            remainingItems: Math.max(0, totalCount - prev.currentPage * 10)
+          }));
+        }
       });
 
       socketService.on('deletedComment', (data: unknown) => {
@@ -151,6 +174,23 @@ const CommentList: React.FC = () => {
               : comment
           )
         );
+      });
+
+      // Set up typing indicator listeners
+      socketService.onUserTyping((data) => {
+        if (data.username && data.username !== user?.username) {
+          setTypingUsers(prev => new Set(prev).add(data.username));
+        }
+      });
+
+      socketService.onUserStopTyping((data) => {
+        if (data.username && data.username !== user?.username) {
+          setTypingUsers(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(data.username);
+            return newSet;
+          });
+        }
       });
     }
 
@@ -195,6 +235,27 @@ const CommentList: React.FC = () => {
       </div>
 
       <CommentForm onCommentCreated={handleCommentCreated} />
+
+      {/* Typing Indicators */}
+      {typingUsers.size > 0 && (
+        <div className="typing-indicators">
+          <div className="typing-indicator-content">
+            <div className="typing-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <span className="typing-text">
+              {Array.from(typingUsers).length === 1 
+                ? `${Array.from(typingUsers)[0]} is typing...`
+                : Array.from(typingUsers).length === 2
+                ? `${Array.from(typingUsers).join(' and ')} are typing...`
+                : `${Array.from(typingUsers).slice(0, 2).join(', ')} and ${Array.from(typingUsers).length - 2} others are typing...`
+              }
+            </span>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="alert alert-error">
