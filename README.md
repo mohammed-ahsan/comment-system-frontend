@@ -1,46 +1,184 @@
-# Getting Started with Create React App
+# MERN Comment System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A full-stack comment system built with MongoDB, Express.js, React.js, and Node.js, featuring real-time updates, authentication, and a modern user interface.
 
-## Available Scripts
+## Repository Links
 
-In the project directory, you can run:
+- **Frontend**: https://github.com/mohammed-ahsan/comment-system-frontend
+- **Backend**: https://github.com/mohammed-ahsan/comment-system-backend
 
-### `npm start`
+## Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### Core Functionality
+- ✅ User authentication (register/login/logout)
+- ✅ Create, edit, and delete comments
+- ✅ Reply to comments with nested threading
+- ✅ Like/dislike comments with real-time updates
+- ✅ Pagination and sorting (newest, most liked, most disliked)
+- ✅ Real-time updates using Socket.io
+- ✅ Responsive design with modern UI
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### Security & Validation
+- ✅ JWT authentication with secure token handling
+- ✅ Input validation and sanitization
+- ✅ XSS protection
+- ✅ Rate limiting
+- ✅ Authorization checks (only comment owners can edit/delete)
 
-### `npm test`
+### Performance & UX
+- ✅ Optimized database queries with indexing
+- ✅ Efficient state management
+- ✅ Loading states and error handling
+- ✅ Smooth animations and transitions
+- ✅ Mobile-responsive design
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Tech Stack
 
-### `npm run build`
+### Backend
+- **Node.js** - Runtime environment
+- **Express.js** - Web framework
+- **MongoDB** - Database
+- **Mongoose** - ODM for MongoDB
+- **Socket.io** - Real-time communication
+- **JWT** - Authentication
+- **express-validator** - Input validation
+- **bcryptjs** - Password hashing
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Frontend
+- **React.js** - UI library
+- **TypeScript** - Type safety
+- **Axios** - HTTP client
+- **Socket.io-client** - Real-time client
+- **SCSS** - Styling
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Installation
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Prerequisites
+- Node.js (v14 or higher)
+- MongoDB (local or cloud instance)
+- npm or yarn
 
-### `npm run eject`
+### Backend Setup
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd techzu-task
+   ```
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+2. **Install backend dependencies**
+   ```bash
+   cd backend
+   npm install
+   ```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Edit `.env` with your configuration:
+   ```env
+   # Server Configuration
+   PORT=5000
+   NODE_ENV=development
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+   # MongoDB Configuration
+   MONGODB_URI=mongodb://localhost:27017/comment-system
 
-## Learn More
+   # JWT Configuration
+   JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+   JWT_EXPIRE=7d
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+   # CORS Configuration
+   CLIENT_URL=http://localhost:3000
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+   # Rate Limiting
+   RATE_LIMIT_WINDOW_MS=900000
+   RATE_LIMIT_MAX_REQUESTS=100
+   ```
+
+4. **Start the backend server**
+   ```bash
+   npm start
+   ```
+   
+   For development with auto-reload:
+   ```bash
+   npm run dev
+   ```
+
+### Frontend Setup
+
+1. **Navigate to frontend directory**
+   ```bash
+   cd ../frontend
+   ```
+
+2. **Install frontend dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Edit `.env` with your configuration:
+   ```env
+   # API Configuration
+   REACT_APP_API_URL=http://localhost:5000/api
+
+   # Socket.io Configuration
+   REACT_APP_SOCKET_URL=http://localhost:5000
+
+   # Environment
+   NODE_ENV=development
+   ```
+
+4. **Start the frontend development server**
+   ```bash
+   npm start
+   ```
+
+The application will be available at `http://localhost:3000`
+
+## Test User Accounts
+
+For testing purposes, you can use the following pre-configured user accounts:
+
+### User A
+- **Email**: earth.ahsan@gmail.com
+- **Password**: .Adgjm11
+
+### User B
+- **Email**: riot.ahsan@gmail.com
+- **Password**: .Adgjm11
+
+These accounts can be used to test the comment system functionality, including:
+- User authentication and login
+- Creating and managing comments
+- Replying to other users' comments
+- Liking/disliking comments
+- Real-time updates between different user sessions
+
+## Security Features
+
+1. **JWT Authentication**: Secure token-based authentication
+2. **Password Hashing**: bcryptjs for secure password storage
+3. **Input Validation**: Comprehensive validation using express-validator
+4. **XSS Protection**: Input sanitization and escaping
+5. **Rate Limiting**: Prevents abuse and brute force attacks
+6. **CORS Configuration**: Proper cross-origin resource sharing setup
+7. **Authorization Checks**: Users can only modify their own content
+
+## Performance Optimizations
+
+1. **Database Indexing**: Optimized queries for common operations
+2. **Pagination**: Efficient data loading for large datasets
+3. **Virtual Fields**: Computed fields for better performance
+4. **Lean Queries**: Optimized database queries
+5. **Real-time Updates**: Efficient Socket.io implementation
+6. **Frontend Optimization**: Memoization and efficient re-renders
+
