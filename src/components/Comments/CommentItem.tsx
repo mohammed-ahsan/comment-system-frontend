@@ -136,11 +136,13 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
 
   const handleNewReply = useCallback((newComment: Comment) => {
     if (newComment.parentComment === currentComment._id) {
-      setReplies(prev => [newComment, ...prev]);
-      setCurrentComment(prev => ({
-        ...prev,
-        replyCount: (prev.replyCount || 0) + 1
-      }));
+      setReplies(prev => {
+        const exists = prev.some(reply => reply._id === newComment._id);
+        if (!exists) {
+          return [newComment, ...prev];
+        }
+        return prev;
+      });
     }
   }, [currentComment._id]);
 
@@ -148,36 +150,21 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
     setReplies(prev => {
       const replyToDelete = prev.find(reply => reply._id === commentId);
       if (replyToDelete) {
-        setCurrentComment(prev => ({
-          ...prev,
-          replyCount: Math.max(0, (prev.replyCount || 0) - 1)
-        }));
       }
       return prev.filter(reply => reply._id !== commentId);
     });
   }, []);
 
-  // Set up socket listeners
   useEffect(() => {
     socketService.onCommentUpdated(handleCommentUpdated);
     socketService.onCommentReaction(handleCommentReaction);
-    socketService.onNewComment(handleNewReply);
     socketService.onCommentDeleted(handleReplyDeleted);
+    
+    socketService.onNewReply(handleNewReply);
 
     return () => {
-      // Cleanup is handled by socketService.removeAllListeners() in the parent component
     };
   }, [handleCommentUpdated, handleCommentReaction, handleNewReply, handleReplyDeleted]);
-
-  // Set up reply-specific listeners
-  useEffect(() => {
-    socketService.onCommentUpdated(handleReplyUpdated);
-    socketService.onCommentReaction(handleReplyReaction);
-
-    return () => {
-      // Cleanup is handled by socketService.removeAllListeners() in the parent component
-    };
-  }, [handleReplyUpdated, handleReplyReaction]);
 
   // Optimized reaction handlers with loading states
   const handleLike = useCallback(async () => {
@@ -344,7 +331,6 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
   }, [showReplyForm, showReplies, loadReplies]);
 
   const handleReplyCreated = useCallback((newReply: Comment) => {
-    setReplies(prev => [newReply, ...prev]);
     setShowReplyForm(false);
     setShowReplies(true);
     onCommentUpdate?.();

@@ -83,16 +83,20 @@ const CommentList: React.FC = () => {
 
       // Set up real-time event listeners
       socketService.onNewComment((newComment: Comment) => {
-        if (newComment.parentComment) {
-          // It's a reply, update reply count for parent
-          const parentId = newComment.parentComment;
-          setReplyCounts(prev => ({
-            ...prev,
-            [parentId]: (prev[parentId] || 0) + 1
-          }));
-        } else {
-          // It's a main comment
+        if (!newComment.parentComment) {
           setComments(prev => [newComment, ...prev]);
+        }
+      });
+
+      socketService.onNewReply((newComment: Comment) => {
+        if (newComment.parentComment) {
+          setComments(prev => 
+            prev.map(comment => 
+              comment._id === newComment.parentComment 
+                ? { ...comment, replyCount: (comment.replyCount || 0) + 1 }
+                : comment
+            )
+          );
         }
       });
 
@@ -105,16 +109,31 @@ const CommentList: React.FC = () => {
       });
 
       socketService.onCommentDeleted((commentId: string) => {
-        setComments(prev => prev.filter(comment => comment._id !== commentId));
-        // Also remove from reply counts if it was a reply
-        setReplyCounts(prev => {
-          const newCounts = { ...prev };
-          Object.keys(newCounts).forEach(parentId => {
-            if (newCounts[parentId] > 0) {
-              newCounts[parentId] = Math.max(0, newCounts[parentId] - 1);
-            }
-          });
-          return newCounts;
+        setComments(prev => {
+          const deletedComment = prev.find(c => c._id === commentId);
+          if (deletedComment?.parentComment) {
+            return prev.map(comment => 
+              comment._id === deletedComment.parentComment 
+                ? { ...comment, replyCount: Math.max(0, (comment.replyCount || 0) - 1) }
+                : comment
+            ).filter(comment => comment._id !== commentId);
+          }
+          return prev.filter(comment => comment._id !== commentId);
+        });
+      });
+
+      socketService.on('deletedComment', (data: unknown) => {
+        const commentId = (data as { id: string }).id;
+        setComments(prev => {
+          const deletedComment = prev.find(c => c._id === commentId);
+          if (deletedComment?.parentComment) {
+            return prev.map(comment => 
+              comment._id === deletedComment.parentComment 
+                ? { ...comment, replyCount: Math.max(0, (comment.replyCount || 0) - 1) }
+                : comment
+            ).filter(comment => comment._id !== commentId);
+          }
+          return prev.filter(comment => comment._id !== commentId);
         });
       });
 

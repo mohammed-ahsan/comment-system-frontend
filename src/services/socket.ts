@@ -5,6 +5,7 @@ interface SocketType {
   connected: boolean;
   emit: (event: string, data?: unknown) => void;
   on: (event: string, callback: (data?: unknown) => void) => void;
+  off: (event: string, callback?: (data?: unknown) => void) => void;
   disconnect: () => void;
   removeAllListeners: () => void;
 }
@@ -65,6 +66,12 @@ class SocketService {
     });
   }
 
+  onNewReply(callback: (comment: Comment) => void): void {
+    this.socket?.on('newReply', (data: unknown) => {
+      callback(data as Comment);
+    });
+  }
+
   onCommentUpdated(callback: (comment: Comment) => void): void {
     this.socket?.on('commentUpdated', (data: unknown) => {
       callback(data as Comment);
@@ -73,7 +80,19 @@ class SocketService {
 
   onCommentDeleted(callback: (commentId: string) => void): void {
     this.socket?.on('commentDeleted', (data: unknown) => {
-      callback(data as string);
+      callback((data as { id: string }).id);
+    });
+  }
+
+  onReplyUpdated(callback: (comment: Comment) => void): void {
+    this.socket?.on('replyUpdated', (data: unknown) => {
+      callback(data as Comment);
+    });
+  }
+
+  onReplyDeleted(callback: (commentId: string) => void): void {
+    this.socket?.on('replyDeleted', (data: unknown) => {
+      callback((data as { id: string }).id);
     });
   }
 
@@ -119,6 +138,11 @@ class SocketService {
   // Remove event listeners
   removeAllListeners(): void {
     this.socket?.removeAllListeners();
+  }
+
+  // Generic socket event listener
+  on(event: string, callback: (data?: unknown) => void): void {
+    this.socket?.on(event, callback);
   }
 
   // Check if connected
