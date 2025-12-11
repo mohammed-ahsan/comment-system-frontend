@@ -18,14 +18,20 @@ const CommentForm: React.FC<CommentFormProps> = ({ onCommentCreated }) => {
   const { user } = useAuth();
 
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
-    setError(null);
+    const newValue = e.target.value;
+    
+    if (newValue.length <= 500) {
+      setContent(newValue);
+      setError(null);
+    } else {
+      setError('Comment cannot exceed 500 characters');
+    }
 
     // Handle typing indicator
-    if (!isTyping && e.target.value.length > 0) {
+    if (!isTyping && newValue.length > 0) {
       setIsTyping(true);
       socketService.emitTyping(user?.username || '');
-    } else if (isTyping && e.target.value.length === 0) {
+    } else if (isTyping && newValue.length === 0) {
       setIsTyping(false);
       socketService.emitStopTyping(user?.username || '');
     }

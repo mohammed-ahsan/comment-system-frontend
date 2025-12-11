@@ -18,13 +18,29 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
 }) => {
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newValue = e.target.value;
+    
+    if (newValue.length <= 500) {
+      setContent(newValue);
+      setError(null);
+    } else {
+      setError('Reply cannot exceed 500 characters');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!content.trim()) {
       setError('Reply cannot be empty');
+      return;
+    }
+
+    if (content.length > 500) {
+      setError('Reply cannot exceed 500 characters');
       return;
     }
 
@@ -48,7 +64,7 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
         <div className="reply-form__textarea-wrapper">
           <textarea
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={handleChange}
             placeholder={placeholder}
             className="reply-form__textarea"
             rows={3}
@@ -74,6 +90,10 @@ const ReplyForm: React.FC<ReplyFormProps> = ({
           >
             {isSubmitting ? 'Posting...' : 'Reply'}
           </button>
+          
+          <span className="reply-char-count">
+            {content.length}/500 characters
+          </span>
         </div>
       </form>
     </div>
