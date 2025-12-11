@@ -51,14 +51,14 @@ const CommentList: React.FC = () => {
         setPagination({
           currentPage: backendPagination.currentPage,
           totalPages: backendPagination.totalPages,
-          total: backendPagination.totalComments,
+          total: backendPagination.total,
           hasNextPage: backendPagination.hasNextPage,
           hasPrevPage: backendPagination.hasPrevPage,
           isFirstPage: backendPagination.isFirstPage || backendPagination.currentPage === 1,
           isLastPage: backendPagination.isLastPage || backendPagination.currentPage === backendPagination.totalPages,
           startIndex: backendPagination.startIndex || (backendPagination.currentPage - 1) * 10 + 1,
-          endIndex: backendPagination.endIndex || Math.min(backendPagination.currentPage * 10, backendPagination.totalComments),
-          remainingItems: backendPagination.remainingItems || Math.max(0, backendPagination.totalComments - backendPagination.currentPage * 10),
+          endIndex: backendPagination.endIndex || Math.min(backendPagination.currentPage * 10, backendPagination.total),
+          remainingItems: backendPagination.remainingItems || Math.max(0, backendPagination.total - backendPagination.currentPage * 10),
         });
       }
     } catch (err: unknown) {

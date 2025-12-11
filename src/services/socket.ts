@@ -102,6 +102,12 @@ class SocketService {
     });
   }
 
+  onReplyReaction(callback: (data: CommentReactionData) => void): void {
+    this.socket?.on('replyReaction', (data: unknown) => {
+      callback(data as CommentReactionData);
+    });
+  }
+
   onCommentLiked(callback: (data: CommentReactionData) => void): void {
     this.socket?.on('commentLiked', (data: unknown) => {
       callback(data as CommentReactionData);

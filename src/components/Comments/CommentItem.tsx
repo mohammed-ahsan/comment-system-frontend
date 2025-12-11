@@ -26,6 +26,9 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
   const [loadingReplies, setLoadingReplies] = useState(false);
   const [repliesPage, setRepliesPage] = useState(1);
   const [hasMoreReplies, setHasMoreReplies] = useState(false);
+  const [repliesLoadedFromServer, setRepliesLoadedFromServer] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+  const [realTimeReplies, setRealTimeReplies] = useState<Comment[]>([]);
 
   const { user } = useAuth();
 
@@ -98,51 +101,63 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
         reply._id === updatedComment._id ? updatedComment : reply
       )
     );
+    setRealTimeReplies(prev =>
+      prev.map(reply => 
+        reply._id === updatedComment._id ? updatedComment : reply
+      )
+    );
   }, []);
 
   const handleReplyReaction = useCallback((data: any) => {
+    // Skip if this is for the main comment, not a reply
     if (data.commentId === currentComment._id) {
       return;
     }
     
-    setReplies(prev =>
-      prev.map(reply => {
-        if (reply._id === data.commentId) {
-          const newReply = {
-            ...reply,
-            likeCount: data.likeCount,
-            dislikeCount: data.dislikeCount,
-          };
+    const updateReplyReaction = (reply: Comment) => {
+      if (reply._id === data.commentId) {
+        const newReply = {
+          ...reply,
+          likeCount: data.likeCount,
+          dislikeCount: data.dislikeCount,
+        };
 
-          if (data.userId === user?.id) {
-            if (data.type === 'like') {
-              newReply.isLikedByUser = true;
-              newReply.isDislikedByUser = false;
-            } else if (data.type === 'dislike') {
-              newReply.isLikedByUser = false;
-              newReply.isDislikedByUser = true;
-            } else if (data.type === 'remove') {
-              newReply.isLikedByUser = false;
-              newReply.isDislikedByUser = false;
-            }
-          } else {
+        if (data.userId === user?.id) {
+          if (data.type === 'like') {
+            newReply.isLikedByUser = true;
+            newReply.isDislikedByUser = false;
+          } else if (data.type === 'dislike') {
+            newReply.isLikedByUser = false;
+            newReply.isDislikedByUser = true;
+          } else if (data.type === 'remove') {
+            newReply.isLikedByUser = false;
+            newReply.isDislikedByUser = false;
           }
-          return newReply;
+        } else {
         }
-        return reply;
-      })
-    );
+        return newReply;
+      }
+      return reply;
+    };
+
+    setReplies(prev => prev.map(updateReplyReaction));
+    setRealTimeReplies(prev => prev.map(updateReplyReaction));
   }, [user?.id, currentComment._id]);
 
   const handleNewReply = useCallback((newComment: Comment) => {
     if (newComment.parentComment === currentComment._id) {
-      setReplies(prev => {
+      setRealTimeReplies(prev => {
         const exists = prev.some(reply => reply._id === newComment._id);
         if (!exists) {
           return [newComment, ...prev];
         }
         return prev;
       });
+      // Update reply count
+      setCurrentComment(prev => ({
+        ...prev,
+        replyCount: (prev.replyCount || 0) + 1
+      }));
     }
   }, [currentComment._id]);
 
@@ -150,6 +165,22 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
     setReplies(prev => {
       const replyToDelete = prev.find(reply => reply._id === commentId);
       if (replyToDelete) {
+        // Update reply count
+        setCurrentComment(prev => ({
+          ...prev,
+          replyCount: Math.max(0, (prev.replyCount || 0) - 1)
+        }));
+      }
+      return prev.filter(reply => reply._id !== commentId);
+    });
+    setRealTimeReplies(prev => {
+      const replyToDelete = prev.find(reply => reply._id === commentId);
+      if (replyToDelete) {
+        // Update reply count
+        setCurrentComment(prev => ({
+          ...prev,
+          replyCount: Math.max(0, (prev.replyCount || 0) - 1)
+        }));
       }
       return prev.filter(reply => reply._id !== commentId);
     });
@@ -161,10 +192,13 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
     socketService.onCommentDeleted(handleReplyDeleted);
     
     socketService.onNewReply(handleNewReply);
+    socketService.onReplyUpdated(handleReplyUpdated);
+    socketService.onReplyDeleted(handleReplyDeleted);
+    socketService.onReplyReaction(handleReplyReaction);
 
     return () => {
     };
-  }, [handleCommentUpdated, handleCommentReaction, handleNewReply, handleReplyDeleted]);
+  }, [handleCommentUpdated, handleCommentReaction, handleNewReply, handleReplyDeleted, handleReplyUpdated, handleReplyReaction]);
 
   // Optimized reaction handlers with loading states
   const handleLike = useCallback(async () => {
@@ -210,7 +244,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
   // Reply reaction handlers
   const handleReplyLike = useCallback(async (replyId: string) => {
     try {
-      const reply = replies.find(r => r._id === replyId);
+      const reply = [...replies, ...realTimeReplies].find(r => r._id === replyId);
       if (!reply) return;
 
       if (reply.isLikedByUser) {
@@ -221,11 +255,11 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
     } catch (err: unknown) {
       console.error('Failed to update reply reaction:', err);
     }
-  }, [replies]);
+  }, [replies, realTimeReplies]);
 
   const handleReplyDislike = useCallback(async (replyId: string) => {
     try {
-      const reply = replies.find(r => r._id === replyId);
+      const reply = [...replies, ...realTimeReplies].find(r => r._id === replyId);
       if (!reply) return;
 
       if (reply.isDislikedByUser) {
@@ -236,7 +270,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
     } catch (err: unknown) {
       console.error('Failed to update reply reaction:', err);
     }
-  }, [replies]);
+  }, [replies, realTimeReplies]);
 
   const handleEdit = useCallback(() => {
     setIsEditing(true);
@@ -308,12 +342,15 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
       const response = await commentsAPI.getReplies(currentComment._id, { page, limit: 10 });
       
       if (page === 1) {
+        // For first page, replace server replies
         setReplies(response.data.data.replies);
+        setRepliesLoadedFromServer(true);
       } else {
+        // For subsequent pages, append new replies
         setReplies(prev => [...prev, ...response.data.data.replies]);
       }
       
-      setHasMoreReplies(response.data.data.pagination.hasNext);
+      setHasMoreReplies(response.data.data.pagination.hasNextPage);
       setRepliesPage(page);
     } catch (err: unknown) {
       console.error('Failed to load replies:', err);
@@ -322,33 +359,43 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
     }
   }, [currentComment._id]);
 
-  const handleReply = useCallback(() => {
+  const handleReply = useCallback(async () => {
     if (showReplyForm || showReplies) {
       // If either form or replies are showing, hide both
       setShowReplyForm(false);
       setShowReplies(false);
     } else {
-      // If nothing is showing, show both
-      setShowReplyForm(true);
-      setShowReplies(true);
-      if (replies.length === 0) {
-        loadReplies();
+      // Show loading state on button
+      setIsReplying(true);
+      
+      try {
+        // If nothing is showing, show both
+        setShowReplyForm(true);
+        setShowReplies(true);
+        
+        // Load replies from server if not already loaded
+        if (!repliesLoadedFromServer) {
+          await loadReplies();
+        }
+      } finally {
+        setIsReplying(false);
       }
     }
-  }, [showReplyForm, showReplies, loadReplies, replies.length]);
+  }, [showReplyForm, showReplies, loadReplies, repliesLoadedFromServer]);
 
   const handleReplyCreated = useCallback((newReply: Comment) => {
-    setShowReplyForm(false);
+    // Keep the reply form visible for continuous replying
+    setShowReplyForm(true);
     setShowReplies(true);
-    onCommentUpdate?.();
-  }, [onCommentUpdate]);
+    // Don't call onCommentUpdate here since socket will handle the update
+  }, []);
 
   const handleToggleReplies = useCallback(() => {
-    if (!showReplies && replies.length === 0) {
+    if (!showReplies && !repliesLoadedFromServer) {
       loadReplies();
     }
     setShowReplies(!showReplies);
-  }, [showReplies, replies.length, loadReplies]);
+  }, [showReplies, repliesLoadedFromServer, loadReplies]);
 
   const handleLoadMoreReplies = useCallback(() => {
     loadReplies(repliesPage + 1);
@@ -382,6 +429,20 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
         });
     }
   }, []);
+
+  // Combine real-time replies with server replies for display
+  const allReplies = useMemo(() => {
+    // Get IDs of server replies to avoid duplicates
+    const serverReplyIds = new Set(replies.map(r => r._id));
+    
+    // Filter real-time replies to only include those not in server replies
+    const uniqueRealTimeReplies = realTimeReplies.filter(reply => !serverReplyIds.has(reply._id));
+    
+    // Combine real-time replies (newest) with server replies (paginated)
+    return [...uniqueRealTimeReplies, ...replies].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [replies, realTimeReplies]);
 
   // Memoize author display name to prevent unnecessary re-renders
   const authorDisplayName = useMemo(() => {
@@ -527,9 +588,9 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
               onClick={handleReply}
               className="reaction-btn"
               title="Reply to comment"
-              disabled={isDeleting || isUpdating || loadingReplies}
+              disabled={isDeleting || isUpdating || isReplying}
             >
-              💬 {loadingReplies ? (
+              💬 {isReplying ? (
                 <>
                   <span className="btn-spinner"></span>
                   Loading...
@@ -564,10 +625,10 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
       )}
 
       {/* Replies Section */}
-      {replies.length > 0 && showReplies && (
+      {allReplies.length > 0 && showReplies && (
         <div className="replies-section">
           <div className="replies-list">
-            {replies.map((reply) => (
+            {allReplies.map((reply) => (
               <div key={reply._id} className="reply-item">
                 <div className="reply-header">
                   <div className="reply-author">
@@ -582,7 +643,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ comment, onCommentUpdate, onC
                     </div>
                     <div>
                       <span className="reply-name">{reply.author?.username || 'Unknown User'}</span>
-                      <span className="reply-date">{formatDate(reply.createdAt)}</span>
+                      <span className="reply-date">{"  "+formatDate(reply.createdAt)}</span>
                     </div>
                   </div>
                 </div>

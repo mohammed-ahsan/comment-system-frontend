@@ -77,9 +77,14 @@ export interface CommentsResponse {
     pagination: {
       currentPage: number;
       totalPages: number;
-      totalComments: number;
+      total: number;
       hasNextPage: boolean;
       hasPrevPage: boolean;
+      isFirstPage: boolean;
+      isLastPage: boolean;
+      startIndex: number;
+      endIndex: number;
+      remainingItems: number;
     };
   };
 }
